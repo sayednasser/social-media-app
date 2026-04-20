@@ -22,28 +22,48 @@ export class BaseRepository<TRawDocument> {
     return result as HydratedDocument<TRawDocument>
   }
 
-
-
-  async findOne({ filter, projection, options }: {
+    async findOne({ filter, projection, options }: {
     filter: QueryFilter<TRawDocument>,
     projection?: ProjectionType<TRawDocument> | null,
     options?: QueryOptions<TRawDocument> & { lean: false }
   }): Promise<HydratedDocument<TRawDocument> | null>;
-
-
   async findOne({ filter, projection, options }:
     {
       filter: QueryFilter<TRawDocument>,
       projection?: ProjectionType<TRawDocument> | null,
       options?: QueryOptions<TRawDocument> & { lean: true }
     }): Promise<FlattenMaps<TRawDocument> | null>;
-
   async findOne({ filter = {}, projection, options }: {
     filter: QueryFilter<TRawDocument>,
     projection?: ProjectionType<TRawDocument> | null,
     options?: QueryOptions<TRawDocument>
   }): Promise<HydratedDocument<TRawDocument> | FlattenMaps<TRawDocument> | null> {
     const doc = this.model.findOne(filter, projection)
+    if (options?.lean) { doc.lean(options.lean) }
+    if (options?.populate) { doc.populate(options.populate as PopulateOptions[]) }
+
+    return await doc.exec()
+
+  }
+
+
+  async find({ filter, projection, options }: {
+    filter: QueryFilter<TRawDocument>,
+    projection?: ProjectionType<TRawDocument> | null,
+    options?: QueryOptions<TRawDocument> & { lean: false }
+  }): Promise<HydratedDocument<TRawDocument> | null>;
+  async find({ filter, projection, options }:
+    {
+      filter: QueryFilter<TRawDocument>,
+      projection?: ProjectionType<TRawDocument> | null,
+      options?: QueryOptions<TRawDocument> & { lean: true }
+    }): Promise<FlattenMaps<TRawDocument> | null>;
+  async find({ filter = {}, projection, options }: {
+    filter: QueryFilter<TRawDocument>,
+    projection?: ProjectionType<TRawDocument> | null,
+    options?: QueryOptions<TRawDocument>
+  }): Promise<HydratedDocument<TRawDocument> | FlattenMaps<TRawDocument> | null> {
+    const doc = this.model.find(filter, projection)
     if (options?.lean) { doc.lean(options.lean) }
     if (options?.populate) { doc.populate(options.populate as PopulateOptions[]) }
 

@@ -20,5 +20,8 @@ export interface IUser {
     changeCredentialsTime?: Date;
     confirmEmail: Date;
     oldPassword: string[];
+    deletedAt: Date,
+
+
 
 }

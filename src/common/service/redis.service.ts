@@ -28,7 +28,7 @@ export class RedisServices {
     }
 
     otpKey({ email, subject = EmailTypeEnum.confirmEmail }: BaseKeyType):string {
-        return `OTP::User::${email}${subject}`
+        return `OTP::User::${email}:${subject}`
     }
     maxTrialOtpKey({ email, subject = EmailTypeEnum.confirmEmail }: BaseKeyType) :string{
         return `${this.otpKey({ email, subject })}::maxTrial`

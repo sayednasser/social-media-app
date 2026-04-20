@@ -21,9 +21,9 @@ router.patch("/resend-Confirm-Email", validation(resendConfirmEmail), async (req
 }); 
 router.post("/login", validation(loginSchema), async (req: Request, res: Response, next: NextFunction): Promise<Response> => {
     const data = await authService.login(req.body, req.host)
-    return successResponse<ILoginResponse>({ res, data })
+    return successResponse<ILoginResponse>({ res, data }) 
 });
-router.post("/signup/google", async (req: Request, res: Response, next: NextFunction): Promise<Response> => {
+router.post("/gmail", async (req: Request, res: Response, next: NextFunction): Promise<Response> => {
     const { status, credentials } = await authService.SignupWithGmail(req.body.idToken, `${req.protocol}://${req.host}`)
     return successResponse({ res, data: { ...credentials } })
 });

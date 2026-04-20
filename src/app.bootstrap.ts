@@ -5,12 +5,11 @@ import { GlobalErrorHandler } from "./middleware";
 import { PORT } from "./config/config";
 import { connectionBD } from "./DB/connection.DB";
 import { redisService } from "./common/service/redis.service";
-// import cors from "cors"
+import cors from "cors"
 const app = express()
 
-
 export const bootstrap = async () => {
-    app.use(express.json())
+    app.use(express.json(),cors())
     await connectionBD()
     await redisService.connect()
     //app routing
