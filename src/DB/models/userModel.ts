@@ -27,15 +27,16 @@ const UserSchema = new Schema<IUser>(
         },
         age: { type: Number, required: true },
         phone: { type: String, required: true },
-        profileImage: { type: String },
-        profileCover: [{ type: String }],
+        profileImage: { public_id: String, secure_url: String },
+        profileCover: [{type:String}],
         confirmPassword: { type: String },
         oldPassword: [{ type: String }],
         confirmedAt: { type: String },
         confirmEmail: Date,
         bio: { type: String, max: 200 },
-        changeCredentialsTime: { type: Date },
+        changeCredentialsTime: { type: Date }, 
         deletedAt: { type: Date },
+        friends: [{ type: Schema.Types.ObjectId, ref: "User" }],
 
     },
     {
@@ -81,4 +82,4 @@ UserSchema.pre(["find", "findOne"], async function () {
 
 })
 
-    export const UserModel = models.User || model<IUser>("User", UserSchema)
+export const UserModel = models.User || model<IUser>("User", UserSchema)

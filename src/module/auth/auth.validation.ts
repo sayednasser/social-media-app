@@ -1,11 +1,10 @@
 import { z } from "zod"
 import { generalValidationFields } from "../../common/validation/generalValidationFields"
-
-
 export const loginSchema = {
     body: z.strictObject({
         email: generalValidationFields.email,
-        password: generalValidationFields.password
+        password: generalValidationFields.password,
+        FCM: generalValidationFields.FCM
     })
 }
 export const signupSchema = {
@@ -13,7 +12,7 @@ export const signupSchema = {
         userName: generalValidationFields.userName,
         confirmPassword: generalValidationFields.confirmPassword,
         phone: generalValidationFields.phone,
-        age:generalValidationFields.age,
+        age: generalValidationFields.age,
 
     }).superRefine((data, ctx) => {
         if (data.password !== data.confirmPassword) {
@@ -26,7 +25,7 @@ export const signupSchema = {
 }
 export const resendConfirmEmail = {
     body: z.strictObject({
-            email: generalValidationFields.email,
+        email: generalValidationFields.email,
 
     })
 }

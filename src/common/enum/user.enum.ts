@@ -11,8 +11,8 @@ export enum GenderEnum {
     female
 }
 export enum TokenTypeEnum {
-    access = "access",
-    refresh = "refresh"
+    access= 'access',
+    refresh= 'refresh' 
 }
 export enum audienceEnum {
     System,

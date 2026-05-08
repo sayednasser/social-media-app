@@ -1,4 +1,4 @@
-import { DeleteResult,  MongooseUpdateQueryOptions, PopulateOptions, Types, UpdateQuery, UpdateWithAggregationPipeline, UpdateWriteOpResult } from "mongoose";
+import { DeleteResult, MongooseUpdateQueryOptions, PopulateOptions, ReturnsNewDoc, Types, UpdateQuery, UpdateWithAggregationPipeline, UpdateWriteOpResult } from "mongoose";
 import { AnyKeys, CreateOptions, FlattenMaps, HydratedDocument, Model, ProjectionType, QueryFilter, QueryOptions } from "mongoose";
 export class BaseRepository<TRawDocument> {
   constructor(protected model: Model<TRawDocument>) { }
@@ -22,16 +22,16 @@ export class BaseRepository<TRawDocument> {
     return result as HydratedDocument<TRawDocument>
   }
 
-    async findOne({ filter, projection, options }: {
+  async findOne({ filter, projection, options }: {
     filter: QueryFilter<TRawDocument>,
     projection?: ProjectionType<TRawDocument> | null,
-    options?: QueryOptions<TRawDocument> & { lean: false }
+    options?: QueryOptions<TRawDocument> & { lean?: false }
   }): Promise<HydratedDocument<TRawDocument> | null>;
   async findOne({ filter, projection, options }:
     {
       filter: QueryFilter<TRawDocument>,
       projection?: ProjectionType<TRawDocument> | null,
-      options?: QueryOptions<TRawDocument> & { lean: true }
+      options?: QueryOptions<TRawDocument> & { lean?: true }
     }): Promise<FlattenMaps<TRawDocument> | null>;
   async findOne({ filter = {}, projection, options }: {
     filter: QueryFilter<TRawDocument>,
@@ -47,28 +47,47 @@ export class BaseRepository<TRawDocument> {
   }
 
 
-  async find({ filter, projection, options }: {
+  async find({
+    filter,
+    projection,
+    options
+  }: {
     filter: QueryFilter<TRawDocument>,
     projection?: ProjectionType<TRawDocument> | null,
-    options?: QueryOptions<TRawDocument> & { lean: false }
-  }): Promise<HydratedDocument<TRawDocument> | null>;
-  async find({ filter, projection, options }:
-    {
-      filter: QueryFilter<TRawDocument>,
-      projection?: ProjectionType<TRawDocument> | null,
-      options?: QueryOptions<TRawDocument> & { lean: true }
-    }): Promise<FlattenMaps<TRawDocument> | null>;
-  async find({ filter = {}, projection, options }: {
+    options?: QueryOptions<TRawDocument> & { lean?: false }
+  }): Promise<HydratedDocument<TRawDocument>[]>;
+
+  async find({
+    filter,
+    projection,
+    options
+  }: {
+    filter: QueryFilter<TRawDocument>,
+    projection?: ProjectionType<TRawDocument> | null,
+    options?: QueryOptions<TRawDocument> & { lean: true }
+  }): Promise<FlattenMaps<TRawDocument>[]>;
+
+  async find({
+    filter = {},
+    projection,
+    options
+  }: {
     filter: QueryFilter<TRawDocument>,
     projection?: ProjectionType<TRawDocument> | null,
     options?: QueryOptions<TRawDocument>
-  }): Promise<HydratedDocument<TRawDocument> | FlattenMaps<TRawDocument> | null> {
+  }): Promise<HydratedDocument<TRawDocument>[] | FlattenMaps<TRawDocument>[]> {
+
     const doc = this.model.find(filter, projection)
-    if (options?.lean) { doc.lean(options.lean) }
-    if (options?.populate) { doc.populate(options.populate as PopulateOptions[]) }
+
+    if (options?.lean) {
+      doc.lean(options.lean)
+    }
+
+    if (options?.populate) {
+      doc.populate(options.populate as PopulateOptions[])
+    }
 
     return await doc.exec()
-
   }
   async findById({ _id, projection, options }: {
     _id: Types.ObjectId,
@@ -91,7 +110,7 @@ export class BaseRepository<TRawDocument> {
     return await doc.exec()
   }
 
-  async updataOne({ filter, update, options }: {
+  async updateOne({ filter, update, options }: {
     filter: QueryFilter<TRawDocument>,
     update: UpdateQuery<TRawDocument> | UpdateWithAggregationPipeline,
     options?: MongooseUpdateQueryOptions<TRawDocument>
@@ -120,31 +139,35 @@ export class BaseRepository<TRawDocument> {
   }): Promise<DeleteResult> {
     return this.model.deleteMany(filter)
   }
-  async findOneAndUpdate({ filter, update, options }: {
+  async findOneAndUpdate({ filter, update, options = {new :true} }: {
     filter: QueryFilter<TRawDocument>,
     update: UpdateQuery<TRawDocument> | UpdateWithAggregationPipeline,
-    options?: MongooseUpdateQueryOptions<TRawDocument>
+    options?: QueryOptions<TRawDocument>|ReturnsNewDoc
   }): Promise<HydratedDocument<TRawDocument> | null> {
-
+    if (Array.isArray(update)) {
+      // update.push({$set:{__v:{$add}}})
+    return this.model.findOneAndUpdate(filter, update, {...options,updatePipeline:true}) 
+    }
     return this.model.findOneAndUpdate(filter, update, options)
   }
+ 
   async findByIdAndUpdate({ _id, update, options }: {
     _id: Types.ObjectId,
     update: UpdateQuery<TRawDocument> | UpdateWithAggregationPipeline,
-    options?: MongooseUpdateQueryOptions<TRawDocument>
+    options?: QueryOptions<TRawDocument>
   }): Promise<HydratedDocument<TRawDocument> | null> {
 
-    return this.model.findByIdAndUpdate(_id, update, options)
+    return this.model.findByIdAndUpdate(_id, update, options = { new: true })
   }
   async findOneAndDelete({ filter = {} }: {
     filter: QueryFilter<TRawDocument>,
-  }): Promise<HydratedDocument<TRawDocument>|null> {
+  }): Promise<HydratedDocument<TRawDocument> | null> {
 
     return this.model.findOneAndDelete(filter)
   }
-   async findByIdAndDelete({ _id }: {
+  async findByIdAndDelete({ _id }: {
     _id: QueryFilter<TRawDocument>,
-  }): Promise<HydratedDocument<TRawDocument>|null> {
+  }): Promise<HydratedDocument<TRawDocument> | null> {
 
     return this.model.findByIdAndDelete(_id)
   }

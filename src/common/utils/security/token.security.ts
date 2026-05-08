@@ -42,9 +42,6 @@ export class TokenService {
                 break;
         }
         return { AccessSignature, RefreshSignature ,audience}
-
-
-
     }
 
     async createLoginCredentials({ user, issuer }:
@@ -90,21 +87,17 @@ export class TokenService {
         }
         return signatureLevel
     }
-
    public async decodeToken({ token, tokenType = TokenTypeEnum.access }: { token: string, tokenType: TokenTypeEnum }): Promise<{ user: HydratedDocument<IUser>, decoded: JwtPayload }> {
-
         const decoded = await jwt.decode(token) as JwtPayload
         if (!decoded?.aud?.length) {
             throw new BadRequestException(`failed to decode token and token is required`)
         }
-
         const [decodedTokenType, audienceType] = decoded.aud
         if (decodedTokenType !== tokenType) {
             throw new UnauthorizedException(`invalid token Type  token type of ${decodedTokenType}  cannot access this api while token type of ${tokenType}`)
         }
+        //role 
         const signatureLevel = await this.getTokenSignature(audienceType as unknown as RoleEnum)
-
-
 
         if (decoded.jti && await redisService.get(redisService.revokeTokenKey({ userId: decoded.sub as string, jti: decoded.jti }))) {
             throw new UnauthorizedException("user already logged in")
@@ -116,24 +109,18 @@ export class TokenService {
         if (!user) {
             throw new UnauthorizedException("user not found please signup first")
         }
-
         if (user.changeCredentialsTime && user.changeCredentialsTime?.getTime() > (decoded.iat as number) * 1000) {
             throw new UnauthorizedException("invalid login session")
         }
         return { user, decoded }
-
     }
-
     async CreateRevokeToken({userId,jti,ttl}:{userId:string|Types.ObjectId,jti:string,ttl:number}){
 
         await this.rides.set({
             key:this.rides.revokeTokenKey({userId,jti}),
             value:jti,
             ttl
-        })
-
-        
-    
+        })   
     }
 }
 

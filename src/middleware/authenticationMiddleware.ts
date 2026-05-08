@@ -1,5 +1,5 @@
 import type { NextFunction, Request, Response } from "express"
-import { BadRequestException, ForbiddenException,  RoleEnum, TokenService, TokenTypeEnum, UnauthorizedException } from "../common"
+import { BadRequestException, ForbiddenException, RoleEnum, TokenService, TokenTypeEnum, UnauthorizedException } from "../common"
 
 export const authentication = (tokenType = TokenTypeEnum.access) => {
     return async (req: Request, res: Response, next: NextFunction) => {
@@ -12,32 +12,33 @@ export const authentication = (tokenType = TokenTypeEnum.access) => {
         if (!flag || !credentials) {
             throw new BadRequestException('missing author')
         }
-        switch (flag) {
+        switch (flag) {  
             case 'Bearer':
                 try {
                     const { user, decoded } = await tokenService.decodeToken({ token: credentials, tokenType })
                     req.user = user
-                    req.decoded = decoded 
+                    req.decoded = decoded
                 } catch (error: any) {
                     if (error.name === 'TokenExpiredError') {
-                        throw new UnauthorizedException ("Token expired"); 
+                        throw new UnauthorizedException("Token expired");
                     }
-                   throw new UnauthorizedException("Invalid token");
+                    throw new UnauthorizedException("Invalid token");
                 }
                 break;
             default:
                 break;
+
         }
         next()
     }
 
 }
-export const authorization = (accessRole:RoleEnum[]) => {
-    return async(req: Request, res: Response, next: NextFunction) => {
+export const authorization = (accessRole: RoleEnum[]) => {
+    return async (req: Request, res: Response, next: NextFunction) => {
         if (!accessRole.includes(req.user?.role as unknown as RoleEnum)) {
             throw new ForbiddenException("not allowed to access")
         }
- 
+
         next()
     }
 

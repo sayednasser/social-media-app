@@ -10,7 +10,8 @@ export interface IUser {
     bio?: String;
     age: number;
     phone: string;
-    profileImage: string; profileCover: string[];
+    profileImage: { public_id: string; secure_url: string }; 
+    profileCover: string[];
     provider: ProviderEnum;
     gender: GenderEnum;
     confirmPassword: string;
@@ -21,6 +22,7 @@ export interface IUser {
     confirmEmail: Date;
     oldPassword: string[];
     deletedAt: Date,
+    friends: string[]
 
 
 

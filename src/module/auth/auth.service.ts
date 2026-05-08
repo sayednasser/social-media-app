@@ -1,4 +1,5 @@
-import { BadRequestException, comparePassword, ConflictException, EmailTypeEnum, encrypt, hashPassword, IUser, NotFoundException, ProviderEnum, TokenService } from "../../common";
+import { BadRequestException, comparePassword, ConflictException, EmailTypeEnum, hashPassword, IUser, NotFoundException, ProviderEnum, TokenService } from "../../common";
+import { notificationService, NotificationService } from "../../common/service/notification.service";
 import { redisService, RedisServices } from "../../common/service/redis.service";
 import { createTemplateOtp, emailEvent, emailTemplate, sendEmail } from "../../common/utils/email";
 import { CLIENT_ID } from "../../config/config";
@@ -8,6 +9,7 @@ import { OAuth2Client, TokenPayload } from 'google-auth-library';
 
 
 class authService {
+  private readonly notification: NotificationService
   private userRepository: UserRepository
   private redis: RedisServices
   private tokenServices: TokenService
@@ -15,6 +17,8 @@ class authService {
     this.userRepository = new UserRepository()
     this.redis = redisService
     this.tokenServices = new TokenService()
+    this.notification = notificationService
+
 
   }
 
@@ -93,7 +97,7 @@ class authService {
     return;
 
   };
-  async login({ email, password }: loginDto, issuer: string): Promise<{ access_token: string, refresh_token: string }> {
+  async login({ email, password, FCM }: loginDto, issuer: string): Promise<{ access_token: string, refresh_token: string }> {
     const user = await this.userRepository.findOne({ filter: { email, confirmEmail: { $exists: true }, provider: ProviderEnum.system } })
     if (!user) {
       throw new NotFoundException("invalid login credentials")
@@ -101,6 +105,13 @@ class authService {
     const checkHashPassword = await comparePassword({ plainText: password, cipherText: user.password })
     if (!checkHashPassword) {
       throw new NotFoundException("invalid login credentials")
+    }
+    if (FCM) {
+      await this.redis.addFCM(user._id, FCM)
+      const tokens = await this.redis.getFCMs(user._id)
+      if (tokens?.length) {
+        await this.notification.sendNotifications({ tokens, data: { title: "Login Done", body: "new login" } })
+      }
     }
     return await this.tokenServices.createLoginCredentials({ user, issuer });
   }
@@ -168,7 +179,7 @@ class authService {
     if (!user) {
       throw new NotFoundException("account not found ")
     }
-    const result = await this.userRepository.updataOne({ filter: { _id: user._id }, update: { password: await hashPassword({ plainText: password }), changeCredentialsTime: new Date } })
+    const result = await this.userRepository.updateOne({ filter: { _id: user._id }, update: { password: await hashPassword({ plainText: password }), changeCredentialsTime: new Date } })
     const tokenKeys = await this.redis.keys(this.redis.baseRevokeTokenKey(user._id))
     const otpKeys = await this.redis.keys(this.redis.otpKey({ email, subject: EmailTypeEnum.forgotPassword }))
 

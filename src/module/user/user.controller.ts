@@ -3,12 +3,16 @@ import type { NextFunction, Request, Response } from "express";
 import { successResponse, TokenTypeEnum } from "../../common";
 import { authentication } from "../../middleware/authenticationMiddleware";
 import { userService } from "./user.service";
+import { cloudUpload } from "../../common/utils/multer/cloud.multer";
+import { filedValidation } from "../../common/utils/multer";
+import { coverPicture, profilePicture } from "./user.validation";
+import { validation } from "../../middleware";
 const router = Router()
 router.get("/profile", async (req: Request, res: Response, next: NextFunction): Promise<Response> => {
+
     const user = await userService.profile()
     return successResponse({ res, data: user, statusCode: 200 })
 })
-
 router.get("/rotate-token", authentication(TokenTypeEnum.refresh), async (req: Request, res: Response, next: NextFunction) => {
     const rotate = await userService.rotateToken(req.user, req.host,
         req.decoded as { sub: string, iat: number, expiresIn: number, jti: string }
@@ -34,5 +38,15 @@ router.delete("/hard-delete-profile/:id", async (req: Request, res: Response, ne
     successResponse({ res, statusCode: 200 })
 })
 
-
-export default router   
+router.patch("/profile-picture", authentication(), cloudUpload( filedValidation.image ).single("image"), validation(profilePicture), async (req: Request, res: Response, next: NextFunction) => {
+    const account = await userService.ProfilePicture(req.file!.path,req.body, req.user)
+    return successResponse({ res, data: account })
+})
+router.patch("/cover-picture", authentication(),
+    cloudUpload(filedValidation.image).array("attachment",2),
+    validation(coverPicture), async (req: Request, res: Response, next: NextFunction) => {
+        const data = await userService.coverPicture(req.files as Express.Multer.File[],req.body.FCM, req.user)
+        successResponse({ res, statusCode: 200, data })
+    })
+ 
+export default router                            

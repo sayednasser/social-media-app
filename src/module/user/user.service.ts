@@ -1,27 +1,31 @@
 
 import { HydratedDocument } from "mongoose"
-import { comparePassword, ConflictException, hashPassword, IUser, logoutEnum, RedisServices, TokenService } from "../../common"
-import { ACCESS_EXPIRES_IN, REFRESH_EXPIRES_IN } from "../../config/config"
+import { CloudinaryService, comparePassword, ConflictException, hashPassword, IUser, logoutEnum, NotificationService, RedisServices, TokenService } from "../../common"
+import { ACCESS_EXPIRES_IN, APPLICATION_NAME, REFRESH_EXPIRES_IN } from "../../config/config"
 import { UserRepository } from "../../DB/repository/user.repository"
 
 
 class UserService {
-    userService: UserRepository
+    private userService: UserRepository
     private tokenService: TokenService
     private redis: RedisServices
+    private cloudinaryService: CloudinaryService
+    private notification: NotificationService
+
 
     constructor() {
         this.userService = new UserRepository()
         this.tokenService = new TokenService()
         this.redis = new RedisServices()
+        this.cloudinaryService = new CloudinaryService()
+        this.notification = new NotificationService()
     }
-    async profile(): Promise<HydratedDocument<IUser>|null> {
-         const users = await this.userService.find({ filter: { paranoid: true } })
+    async profile(): Promise<HydratedDocument<IUser>[]> {
+        const users = await this.userService.find({ filter: { paranoid: true } })
         return users
     }
-
-    async rotateToken(user: HydratedDocument<IUser>, issuer: string, { sub, iat, expiresIn, jti }: { sub: string, iat: number, expiresIn: number, jti: string }): Promise < { access_token: string, refresh_token: string } > {
-            if(Date.now() + 30000 >= (iat + ACCESS_EXPIRES_IN) * 1000) {
+    async rotateToken(user: HydratedDocument<IUser>, issuer: string, { sub, iat, expiresIn, jti }: { sub: string, iat: number, expiresIn: number, jti: string }): Promise<{ access_token: string, refresh_token: string }> {
+        if (Date.now() + 30000 >= (iat + ACCESS_EXPIRES_IN) * 1000) {
 
             throw new ConflictException("current access session still valid")
         }
@@ -70,7 +74,7 @@ class UserService {
 
     }
     async softDelete(id: string) {
-        const result = await this.userService.updataOne({ filter: { _id: id, confirmEmail: { $exists: true } }, update: { deletedAt: new Date() } })
+        const result = await this.userService.updateOne({ filter: { _id: id, confirmEmail: { $exists: true } }, update: { deletedAt: new Date() } })
         if (result.matchedCount == 0) {
             throw new ConflictException("account not found or not confirmed")
         }
@@ -83,7 +87,44 @@ class UserService {
         }
         return;
     }
- 
+    async ProfilePicture(file: string, FCM: string, user: HydratedDocument<IUser>): Promise<IUser> {
+        if (user.profileImage?.public_id) {
+            await this.cloudinaryService.deleteImage(user.profileImage.public_id)
+        }
+        
+        const { public_id, secure_url } = await this.cloudinaryService.uploadFile({ filePath: file, folder: `${APPLICATION_NAME}/users/${user.userName}/profilePicture` })
+        user.profileImage = { public_id, secure_url }
+        await user.save()
+        if (FCM) {
+            await this.redis.addFCM(user._id, FCM)
+            const tokens = await this.redis.getFCMs(user._id)
+            if (tokens?.length) {
+                await this.notification.sendNotifications({ tokens, data: { title: "faceBook", body: "profile picture is updated successfully" } })
+            }
+        }
+
+        return user 
+    }
+    async coverPicture(files: { path: string }[], FCM: string, user: HydratedDocument<IUser>): Promise<HydratedDocument<IUser>> {
+        if (user.profileCover?.length) {
+            await this.cloudinaryService.deleteFiles(user.profileCover.map(( ele ) => ele))
+        }
+        console.log(files);
+       user.profileCover = await this.cloudinaryService.uploadFiles({ files, folder:`${APPLICATION_NAME}/users/${user.userName}/coverPicture`})       
+        await user.save() 
+        console.log({cover:user.profileCover});
+        
+        if (FCM) {
+            await this.redis.addFCM(user._id, FCM)
+            const tokens = await this.redis.getFCMs(user._id)
+            if (tokens?.length) {
+                await this.notification.sendNotifications({ tokens, data: { title: "faceBook", body: "cover picture is updated successfully" } })
+            }
+        }
+        return user
+
+    }
+
 
 }
 
