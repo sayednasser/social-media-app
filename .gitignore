@@ -3,3 +3,5 @@
 dist
 node_modules
 .vscode
+src/config/social-911b8-firebase-adminsdk-fbsvc-04d2b6cd59.json
+src/config/*.json
